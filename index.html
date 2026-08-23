@@ -3,29 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#141712">
 <title>Назад вовремя</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
 
+<div class="chassis">
+  <span class="screw tl"></span><span class="screw tr"></span><span class="screw bl"></span><span class="screw br"></span>
+  <div class="statusbar">
+    <span class="mark">НАЗАД · ВОВРЕМЯ</span>
+    <span class="gps" id="gps-indicator"><span class="dot"></span><span id="gps-label">GPS…</span></span>
+  </div>
+
 <div id="app">
 
   <!-- ===== SETUP SCREEN ===== -->
-  <section id="screen-setup" class="screen">
+  <section id="screen-setup" class="panel">
     <header class="hero">
-      <h1>Назад вовремя</h1>
-      <p class="subtitle">Отметьте точку встречи — приложение подскажет, когда пора возвращаться, чтобы успеть.</p>
+      <h1>Прибор возврата</h1>
+      <p class="subtitle">Отметьте точку встречи — прибор подскажет, когда пора возвращаться, чтобы успеть.</p>
     </header>
 
     <p id="join-banner" class="join-banner hidden"></p>
 
     <div class="card">
-      <h2>1. Точка встречи</h2>
+      <h2>01 · Точка встречи</h2>
       <button id="btn-mark-point" class="btn btn-primary btn-lg">📍 Отметить здесь</button>
       <p id="point-status" class="hint">Точка ещё не отмечена</p>
       <div id="point-details" class="point-details hidden">
@@ -42,7 +51,7 @@
     </div>
 
     <div class="card">
-      <h2>2. Сколько у вас времени</h2>
+      <h2>02 · Сколько у вас времени</h2>
       <div class="presets" id="duration-presets">
         <button class="chip" data-min="30">30 мин</button>
         <button class="chip" data-min="60">1 ч</button>
@@ -56,7 +65,7 @@
     </div>
 
     <div class="card">
-      <h2>3. Настройки</h2>
+      <h2>03 · Настройки</h2>
       <label class="field">
         <span>Темп ходьбы</span>
         <select id="pace-select">
@@ -77,12 +86,12 @@
       </label>
     </div>
 
-    <button id="btn-start" class="btn btn-success btn-lg" disabled>Начать отсчёт</button>
+    <button id="btn-start" class="btn btn-primary btn-lg" disabled>Начать отсчёт</button>
     <p id="setup-error" class="error"></p>
   </section>
 
   <!-- ===== TRACKING SCREEN ===== -->
-  <section id="screen-tracking" class="screen hidden">
+  <section id="screen-tracking" class="panel hidden" data-status="ok">
     <div id="status-banner" class="status-banner status-ok">
       <div id="status-title" class="status-title">Гуляйте спокойно</div>
       <div id="status-detail" class="status-detail">—</div>
@@ -93,44 +102,58 @@
       <img id="point-photo-view" class="photo-preview hidden" alt="Фото точки встречи">
     </div>
 
-    <div id="compass" class="compass hidden">
-      <div class="compass-dial">
-        <div id="compass-arrow" class="compass-arrow">↑</div>
+    <div id="compass" class="homing hidden">
+      <svg viewBox="0 0 300 300">
+        <circle class="ring-static" cx="150" cy="150" r="122" fill="none" stroke-width="1.5"/>
+        <circle class="pulse p1" cx="150" cy="150" r="122" />
+        <circle class="pulse p2" cx="150" cy="150" r="122" />
+        <circle class="pulse p3" cx="150" cy="150" r="122" />
+        <g id="compass-ticks"></g>
+        <text class="cardinal" x="150" y="28" text-anchor="middle">С</text>
+        <text class="cardinal" x="272" y="155" text-anchor="middle">В</text>
+        <text class="cardinal" x="150" y="282" text-anchor="middle">Ю</text>
+        <text class="cardinal" x="28" y="155" text-anchor="middle">З</text>
+        <g id="compass-arrow" class="needle">
+          <line class="stem" x1="150" y1="28" x2="150" y2="48"/>
+          <path d="M150,48 L161,74 L150,66 L139,74 Z"/>
+        </g>
+      </svg>
+      <div class="homing-readout">
+        <span class="cap">До точки</span>
+        <span id="ring-distance" class="val">—</span>
+        <span id="compass-deg" class="brg">азимут —</span>
       </div>
-      <div class="compass-info">
-        <div id="compass-deg" class="compass-deg">—</div>
-        <button id="btn-enable-compass" class="btn btn-outline btn-sm hidden">Включить компас</button>
-      </div>
+      <button id="btn-enable-compass" class="btn btn-outline btn-sm hidden">Включить компас</button>
     </div>
 
-    <div id="map"></div>
+    <div class="map-wrap">
+      <span class="plot-tag">План</span>
+      <div id="map"></div>
+    </div>
 
     <div class="stats">
-      <div class="stat">
-        <span class="stat-label">До точки</span>
-        <span id="stat-distance" class="stat-value">—</span>
+      <div class="dwin">
+        <span class="cap">Идти назад</span>
+        <span id="stat-walk-time" class="val">—</span>
       </div>
-      <div class="stat">
-        <span class="stat-label">Идти назад</span>
-        <span id="stat-walk-time" class="stat-value">—</span>
+      <div class="dwin">
+        <span class="cap">Выходить через</span>
+        <span id="stat-leave-in" class="val">—</span>
       </div>
-      <div class="stat">
-        <span class="stat-label">Выходить через</span>
-        <span id="stat-leave-in" class="stat-value">—</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Встреча в</span>
-        <span id="stat-deadline" class="stat-value">—</span>
+      <div class="dwin">
+        <span class="cap">Встреча в</span>
+        <span id="stat-deadline" class="val">—</span>
       </div>
     </div>
 
     <div class="row-buttons">
-      <button id="btn-share" class="btn btn-outline">🔗 Поделиться точкой</button>
-      <button id="btn-stop" class="btn btn-outline">Завершить</button>
+      <button id="btn-share" class="key">⤴ Поделиться</button>
+      <button id="btn-stop" class="key primary">■ Завершить</button>
     </div>
     <p id="share-status" class="hint"></p>
   </section>
 
+</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

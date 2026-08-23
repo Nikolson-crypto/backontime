@@ -125,9 +125,11 @@ btnMarkPoint.addEventListener('click', async () => {
     pointStatus.textContent = `Точка отмечена (точность ~${Math.round(pos.coords.accuracy)} м)`;
     btnMarkPoint.textContent = '📍 Отметить заново';
     pointDetails.classList.remove('hidden');
+    setGpsStatus(true);
   } catch (err) {
     setupError.textContent = 'Не удалось получить геолокацию: ' + describeGeoError(err);
     btnMarkPoint.textContent = '📍 Отметить здесь';
+    setGpsStatus(false);
   } finally {
     btnMarkPoint.disabled = false;
     updateStartButton();
@@ -223,7 +225,9 @@ async function fetchWalkingRoute(from, to) {
 const statusBanner = el('status-banner');
 const statusTitle = el('status-title');
 const statusDetail = el('status-detail');
-const statDistance = el('stat-distance');
+const ringDistance = el('ring-distance');
+const gpsLabel = el('gps-label');
+const gpsIndicator = el('gps-indicator');
 const statWalkTime = el('stat-walk-time');
 const statLeaveIn = el('stat-leave-in');
 const statDeadline = el('stat-deadline');
@@ -268,6 +272,32 @@ function cardinal(deg) {
   return dirs[Math.round(deg / 45) % 8];
 }
 
+function generateCompassTicks() {
+  const ticks = el('compass-ticks');
+  if (!ticks || ticks.childElementCount) return;
+  const cx = 150, cy = 150, rOuter = 122;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  for (let deg = 0; deg < 360; deg += 15) {
+    const major = deg % 90 === 0;
+    const len = major ? 14 : 8;
+    const rad = ((deg - 90) * Math.PI) / 180;
+    const r1 = rOuter - len;
+    const x1 = cx + r1 * Math.cos(rad), y1 = cy + r1 * Math.sin(rad);
+    const x2 = cx + rOuter * Math.cos(rad), y2 = cy + rOuter * Math.sin(rad);
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'tick' + (major ? ' major' : ''));
+    ticks.appendChild(line);
+  }
+}
+
+function setGpsStatus(ok) {
+  if (!gpsLabel) return;
+  gpsLabel.textContent = ok ? 'GPS ЕСТЬ' : 'GPS ОШИБКА';
+  gpsIndicator.classList.toggle('gps-bad', !ok);
+}
+
 function handleOrientation(e) {
   if (typeof e.webkitCompassHeading === 'number') {
     deviceHeading = e.webkitCompassHeading;
@@ -295,6 +325,7 @@ function enableCompass() {
 
 function initCompass() {
   compassWidget.classList.remove('hidden');
+  generateCompassTicks();
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     btnEnableCompass.classList.remove('hidden');
   } else {
@@ -307,8 +338,8 @@ function updateCompass() {
   const brg = bearingDeg(currentPos, session.point);
   const rotation = deviceHeading !== null ? (brg - deviceHeading + 360) % 360 : brg;
   compassArrow.style.transform = `rotate(${rotation}deg)`;
-  const suffix = deviceHeading !== null ? '' : ' (от севера, включите компас для точности)';
-  compassDeg.textContent = `${Math.round(brg)}° ${cardinal(brg)}${suffix}`;
+  const suffix = deviceHeading !== null ? '' : ' · от севера';
+  compassDeg.textContent = `Азимут ${Math.round(brg)}° ${cardinal(brg)}${suffix}`;
 }
 
 btnEnableCompass.addEventListener('click', enableCompass);
@@ -341,10 +372,12 @@ function startTracking(s) {
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
       currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setGpsStatus(true);
       updateUserMarker();
       maybeRefreshRoute();
     },
     (err) => {
+      setGpsStatus(false);
       statusDetail.textContent = 'Ошибка геолокации: ' + describeGeoError(err);
     },
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
@@ -358,7 +391,7 @@ function updateUserMarker() {
   if (!currentPos) return;
   if (!userMarker) {
     userMarker = L.circleMarker([currentPos.lat, currentPos.lng], {
-      radius: 8, color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 0.9,
+      radius: 8, color: '#baff29', fillColor: '#baff29', fillOpacity: 0.9,
     }).addTo(map);
   } else {
     userMarker.setLatLng([currentPos.lat, currentPos.lng]);
@@ -389,7 +422,7 @@ async function maybeRefreshRoute() {
 
 function drawRoute(coords) {
   if (routeLine) map.removeLayer(routeLine);
-  routeLine = L.polyline(coords, { color: '#38bdf8', weight: 4, opacity: 0.8 }).addTo(map);
+  routeLine = L.polyline(coords, { color: '#ffb020', weight: 4, opacity: 0.85 }).addTo(map);
 }
 
 function fmtDuration(ms) {
@@ -416,7 +449,7 @@ function tick() {
   statDeadline.textContent = fmtClock(deadline);
 
   if (cachedWalkMs === null) {
-    statDistance.textContent = 'ищем…';
+    ringDistance.textContent = 'ищем…';
     statWalkTime.textContent = 'ищем…';
     statLeaveIn.textContent = '—';
     statusTitle.textContent = 'Определяем местоположение…';
@@ -425,7 +458,7 @@ function tick() {
   }
 
   const distM = currentPos ? haversineMeters(currentPos, session.point) : null;
-  statDistance.textContent = distM !== null ? formatDistance(distM) : '—';
+  ringDistance.textContent = distM !== null ? formatDistance(distM) : '—';
   statWalkTime.textContent = fmtDuration(cachedWalkMs);
   updateCompass();
 
@@ -455,6 +488,7 @@ function formatDistance(m) {
 
 function setStatus(level, title, detail) {
   statusBanner.className = 'status-banner status-' + level;
+  screens.tracking.dataset.status = level;
   statusTitle.textContent = title;
   statusDetail.textContent = detail;
 }
