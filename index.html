@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>Назад вовремя</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== SETUP SCREEN ===== -->
+  <section id="screen-setup" class="screen">
+    <header class="hero">
+      <h1>Назад вовремя</h1>
+      <p class="subtitle">Отметьте точку встречи — приложение подскажет, когда пора возвращаться, чтобы успеть.</p>
+    </header>
+
+    <div class="card">
+      <h2>1. Точка встречи</h2>
+      <button id="btn-mark-point" class="btn btn-primary btn-lg">📍 Отметить здесь</button>
+      <p id="point-status" class="hint">Точка ещё не отмечена</p>
+    </div>
+
+    <div class="card">
+      <h2>2. Сколько у вас времени</h2>
+      <div class="presets" id="duration-presets">
+        <button class="chip" data-min="30">30 мин</button>
+        <button class="chip" data-min="60">1 ч</button>
+        <button class="chip" data-min="90">1.5 ч</button>
+        <button class="chip" data-min="120">2 ч</button>
+        <button class="chip" data-min="180">3 ч</button>
+      </div>
+      <div class="custom-duration">
+        <input type="number" id="custom-minutes" min="1" max="720" placeholder="или своё, мин">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Настройки</h2>
+      <label class="field">
+        <span>Темп ходьбы</span>
+        <select id="pace-select">
+          <option value="3.5">Медленный (3.5 км/ч)</option>
+          <option value="4.5" selected>Обычный (4.5 км/ч)</option>
+          <option value="6">Быстрый (6 км/ч)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Запас времени на сборы</span>
+        <select id="buffer-select">
+          <option value="0">Без запаса</option>
+          <option value="5" selected>5 мин</option>
+          <option value="10">10 мин</option>
+          <option value="15">15 мин</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="btn-start" class="btn btn-success btn-lg" disabled>Начать отсчёт</button>
+    <p id="setup-error" class="error"></p>
+  </section>
+
+  <!-- ===== TRACKING SCREEN ===== -->
+  <section id="screen-tracking" class="screen hidden">
+    <div id="status-banner" class="status-banner status-ok">
+      <div id="status-title" class="status-title">Гуляйте спокойно</div>
+      <div id="status-detail" class="status-detail">—</div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">До точки</span>
+        <span id="stat-distance" class="stat-value">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Идти назад</span>
+        <span id="stat-walk-time" class="stat-value">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Выходить через</span>
+        <span id="stat-leave-in" class="stat-value">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Встреча в</span>
+        <span id="stat-deadline" class="stat-value">—</span>
+      </div>
+    </div>
+
+    <button id="btn-stop" class="btn btn-outline">Завершить</button>
+  </section>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>
