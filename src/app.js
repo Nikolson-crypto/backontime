@@ -25,6 +25,75 @@ const btnMarkPoint = el('btn-mark-point');
 const pointStatus = el('point-status');
 const btnStart = el('btn-start');
 const setupError = el('setup-error');
+const pointDetails = el('point-details');
+const pointNoteInput = el('point-note');
+const pointPhotoInput = el('point-photo');
+const pointPhotoPreview = el('point-photo-preview');
+const joinBanner = el('join-banner');
+
+pointNoteInput.addEventListener('input', () => {
+  if (markedPoint) markedPoint.note = pointNoteInput.value.trim();
+});
+
+pointPhotoInput.addEventListener('change', async () => {
+  const file = pointPhotoInput.files[0];
+  if (!file || !markedPoint) return;
+  try {
+    const dataUrl = await downscaleImage(file, 480, 0.6);
+    markedPoint.photo = dataUrl;
+    pointPhotoPreview.src = dataUrl;
+    pointPhotoPreview.classList.remove('hidden');
+  } catch { /* image processing failed, ignore */ }
+});
+
+function downscaleImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------- Join a shared meeting point via URL ----------
+function parseJoinParams() {
+  const params = new URLSearchParams(window.location.search);
+  const lat = Number(params.get('lat'));
+  const lng = Number(params.get('lng'));
+  const deadline = Number(params.get('deadline'));
+  if (!lat || !lng || !deadline) return null;
+  return {
+    lat, lng, deadline,
+    note: params.get('note') || '',
+  };
+}
+
+function applyJoinParams(join) {
+  markedPoint = { lat: join.lat, lng: join.lng, note: join.note };
+  pointStatus.textContent = 'Точка получена по ссылке';
+  pointDetails.classList.remove('hidden');
+  pointNoteInput.value = join.note;
+  btnMarkPoint.textContent = '📍 Отметить заново';
+  const minutesLeft = Math.max(1, Math.round((join.deadline - Date.now()) / 60000));
+  customMinutesInput.value = minutesLeft;
+  selectedMinutes = minutesLeft;
+  joinBanner.textContent = `Точка встречи получена по ссылке. Осталось времени: ~${minutesLeft} мин.`;
+  joinBanner.classList.remove('hidden');
+  updateStartButton();
+}
 
 durationPresets.addEventListener('click', (e) => {
   const btn = e.target.closest('.chip');
@@ -52,9 +121,10 @@ btnMarkPoint.addEventListener('click', async () => {
   btnMarkPoint.textContent = 'Определяем местоположение…';
   try {
     const pos = await getCurrentPosition();
-    markedPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    markedPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, note: pointNoteInput.value.trim() };
     pointStatus.textContent = `Точка отмечена (точность ~${Math.round(pos.coords.accuracy)} м)`;
     btnMarkPoint.textContent = '📍 Отметить заново';
+    pointDetails.classList.remove('hidden');
   } catch (err) {
     setupError.textContent = 'Не удалось получить геолокацию: ' + describeGeoError(err);
     btnMarkPoint.textContent = '📍 Отметить здесь';
@@ -158,6 +228,15 @@ const statWalkTime = el('stat-walk-time');
 const statLeaveIn = el('stat-leave-in');
 const statDeadline = el('stat-deadline');
 const btnStop = el('btn-stop');
+const btnShare = el('btn-share');
+const shareStatus = el('share-status');
+const pointNoteCard = el('point-note-card');
+const pointNoteText = el('point-note-text');
+const pointPhotoView = el('point-photo-view');
+const compassWidget = el('compass');
+const compassArrow = el('compass-arrow');
+const compassDeg = el('compass-deg');
+const btnEnableCompass = el('btn-enable-compass');
 
 let map, meetMarker, userMarker, routeLine;
 let watchId = null;
@@ -171,6 +250,68 @@ let lastRouteFetchPos = null;
 let alarmFired = false;
 let alarmInterval = null;
 let audioCtx = null;
+let deviceHeading = null;
+
+function bearingDeg(from, to) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const toDeg = (r) => (r * 180) / Math.PI;
+  const lat1 = toRad(from.lat);
+  const lat2 = toRad(to.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function cardinal(deg) {
+  const dirs = ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+function handleOrientation(e) {
+  if (typeof e.webkitCompassHeading === 'number') {
+    deviceHeading = e.webkitCompassHeading;
+  } else if (e.absolute && e.alpha !== null) {
+    deviceHeading = (360 - e.alpha) % 360;
+  }
+}
+
+function enableCompass() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then((state) => {
+        if (state === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation);
+          btnEnableCompass.classList.add('hidden');
+        }
+      })
+      .catch(() => {});
+  } else if ('DeviceOrientationEvent' in window) {
+    window.addEventListener('deviceorientationabsolute', handleOrientation);
+    window.addEventListener('deviceorientation', handleOrientation);
+    btnEnableCompass.classList.add('hidden');
+  }
+}
+
+function initCompass() {
+  compassWidget.classList.remove('hidden');
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    btnEnableCompass.classList.remove('hidden');
+  } else {
+    enableCompass();
+  }
+}
+
+function updateCompass() {
+  if (!currentPos || !session) return;
+  const brg = bearingDeg(currentPos, session.point);
+  const rotation = deviceHeading !== null ? (brg - deviceHeading + 360) % 360 : brg;
+  compassArrow.style.transform = `rotate(${rotation}deg)`;
+  const suffix = deviceHeading !== null ? '' : ' (от севера, включите компас для точности)';
+  compassDeg.textContent = `${Math.round(brg)}° ${cardinal(brg)}${suffix}`;
+}
+
+btnEnableCompass.addEventListener('click', enableCompass);
 
 function initMap(point) {
   map = L.map('map', { zoomControl: true, attributionControl: false }).setView([point.lat, point.lng], 16);
@@ -186,6 +327,16 @@ function startTracking(s) {
 
   initMap(session.point);
   requestWakeLock();
+  initCompass();
+
+  if (session.point.note || session.point.photo) {
+    pointNoteText.textContent = session.point.note || '';
+    if (session.point.photo) {
+      pointPhotoView.src = session.point.photo;
+      pointPhotoView.classList.remove('hidden');
+    }
+    pointNoteCard.classList.remove('hidden');
+  }
 
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
@@ -276,6 +427,7 @@ function tick() {
   const distM = currentPos ? haversineMeters(currentPos, session.point) : null;
   statDistance.textContent = distM !== null ? formatDistance(distM) : '—';
   statWalkTime.textContent = fmtDuration(cachedWalkMs);
+  updateCompass();
 
   const leaveByTime = deadline - cachedWalkMs - session.bufferMs;
   const timeUntilLeave = leaveByTime - now;
@@ -353,6 +505,35 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && session) requestWakeLock();
 });
 
+function buildShareUrl() {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('lat', session.point.lat.toFixed(6));
+  url.searchParams.set('lng', session.point.lng.toFixed(6));
+  url.searchParams.set('deadline', String(session.startTime + session.durationMs));
+  if (session.point.note) url.searchParams.set('note', session.point.note);
+  return url.toString();
+}
+
+btnShare.addEventListener('click', async () => {
+  const url = buildShareUrl();
+  shareStatus.textContent = '';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Точка встречи', text: 'Общий таймер возврата к точке встречи', url });
+      return;
+    } catch {
+      // user cancelled or share failed, fall through to clipboard
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    shareStatus.textContent = 'Ссылка скопирована в буфер обмена';
+  } catch {
+    shareStatus.textContent = url;
+  }
+});
+
 btnStop.addEventListener('click', () => {
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   if (tickInterval) clearInterval(tickInterval);
@@ -362,10 +543,13 @@ btnStop.addEventListener('click', () => {
   window.location.reload();
 });
 
-// ---------- Resume an in-progress session on reload ----------
-(function resumeIfNeeded() {
+// ---------- Resume an in-progress session on reload, or apply a shared join link ----------
+(function initSession() {
   const saved = loadSession();
   if (saved && saved.point && saved.startTime + saved.durationMs > Date.now() - 60 * 60 * 1000) {
     startTracking(saved);
+    return;
   }
+  const join = parseJoinParams();
+  if (join) applyJoinParams(join);
 })();
