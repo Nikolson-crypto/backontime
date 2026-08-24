@@ -232,6 +232,7 @@ const statWalkTime = el('stat-walk-time');
 const statLeaveIn = el('stat-leave-in');
 const statDeadline = el('stat-deadline');
 const btnStop = el('btn-stop');
+const btnSilence = el('btn-silence');
 const btnShare = el('btn-share');
 const shareStatus = el('share-status');
 const pointNoteCard = el('point-note-card');
@@ -587,10 +588,19 @@ function fireAlarmOnce() {
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
     beep();
   }, 15000);
+  if (btnSilence) btnSilence.classList.remove('hidden');
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification('Пора возвращаться!', { body: 'Вы можете опоздать к точке встречи.' });
   }
 }
+
+function silenceAlarm() {
+  if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+  if (navigator.vibrate) navigator.vibrate(0);
+  if (btnSilence) btnSilence.classList.add('hidden');
+}
+
+btnSilence.addEventListener('click', silenceAlarm);
 
 if ('Notification' in window && Notification.permission === 'default') {
   Notification.requestPermission();

@@ -138,6 +138,12 @@ html, body {
   box-shadow: 0 2px 0 #5c7f16, inset 0 1px 0 rgba(255,255,255,0.35);
 }
 .btn-outline { background: linear-gradient(180deg, #2c3324, #1a1f15); }
+.btn-silence {
+  color: var(--graphite);
+  background: linear-gradient(180deg, var(--amber), #d1901a);
+  box-shadow: 0 2px 0 #7a5410, inset 0 1px 0 rgba(255,255,255,0.35);
+  margin-top: 10px;
+}
 .btn-sm { padding: 7px 12px; font-size: 0.72rem; width: auto; }
 
 .hint { margin: 10px 0 0; font-size: 0.8rem; color: var(--paper-dim); text-align: center; font-weight: 500; }
