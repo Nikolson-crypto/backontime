@@ -287,9 +287,13 @@ html, body {
   padding: 3px 7px;
   border-radius: 4px;
 }
-#map {
-  height: 240px;
-  filter: saturate(0.55) sepia(0.25) hue-rotate(45deg) brightness(0.85) contrast(1.08);
+#map { height: 240px; }
+/* Тинт только на плитку, чтобы маркеры и маршрут оставались в истинных цветах. */
+#map[data-layer="map"] .leaflet-tile-pane {
+  filter: saturate(0.6) sepia(0.22) hue-rotate(40deg) brightness(0.88) contrast(1.08);
+}
+#map[data-layer="imagery"] .leaflet-tile-pane {
+  filter: saturate(0.92) brightness(0.9) contrast(1.06);
 }
 .leaflet-control-zoom a {
   background: var(--panel) !important;
@@ -297,6 +301,39 @@ html, body {
   border-color: var(--metal-dim) !important;
 }
 .leaflet-bar { border: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.5) !important; }
+
+/* ===== "Locate me" button ===== */
+.leaflet-locate a {
+  background: var(--panel) !important;
+  color: var(--phosphor) !important;
+  border-color: var(--metal-dim) !important;
+  display: flex; align-items: center; justify-content: center;
+}
+.leaflet-locate svg { width: 18px; height: 18px; }
+.leaflet-locate svg circle { fill: none; stroke: currentColor; stroke-width: 2; }
+.leaflet-locate svg line { stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.leaflet-locate a.locating { color: var(--amber) !important; }
+.leaflet-locate a.locating svg { animation: locate-pulse 1s ease-in-out infinite; }
+@keyframes locate-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ===== Layer switcher (field-instrument styling) ===== */
+.leaflet-control-layers {
+  background: var(--panel) !important;
+  border: 1px solid var(--metal-dim) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5) !important;
+  color: var(--paper);
+}
+.leaflet-control-layers-toggle {
+  background-color: var(--panel) !important;
+  filter: invert(1) brightness(1.4);
+}
+.leaflet-control-layers-expanded { padding: 8px 10px !important; }
+.leaflet-control-layers label {
+  font-family: 'Jura', sans-serif; font-weight: 600; font-size: 0.8rem;
+  color: var(--paper); display: flex; align-items: center; gap: 6px; margin: 2px 0;
+}
+.leaflet-control-layers-selector { accent-color: var(--phosphor); }
 
 /* ===== Data strip ===== */
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

@@ -345,10 +345,79 @@ function updateCompass() {
 btnEnableCompass.addEventListener('click', enableCompass);
 
 function initMap(point) {
-  map = L.map('map', { zoomControl: true, attributionControl: false }).setView([point.lat, point.lng], 16);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  const baseLayers = {
+    'Схема': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20, subdomains: 'abcd', crossOrigin: true,
+      attribution: '© OpenStreetMap · © CARTO',
+    }),
+    'Спутник': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, crossOrigin: true,
+      attribution: 'Спутник © Esri',
+    }),
+    'Топо': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17, subdomains: 'abc', crossOrigin: true,
+      attribution: '© OpenStreetMap · © OpenTopoMap (CC-BY-SA)',
+    }),
+  };
+
+  map = L.map('map', {
+    zoomControl: true,
+    attributionControl: false,
+    layers: [baseLayers['Схема']],
+  }).setView([point.lat, point.lng], 16);
+
+  // Фосфорный тинт хорош для схемы/топо, но портит спутник — переключаем по слою.
+  const setLayerTint = (name) => {
+    map.getContainer().dataset.layer = name === 'Спутник' ? 'imagery' : 'map';
+  };
+  setLayerTint('Схема');
+  map.on('baselayerchange', (e) => setLayerTint(e.name));
+
+  L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+
+  const LocateBtn = L.Control.extend({
+    options: { position: 'topleft' },
+    onAdd() {
+      const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-locate');
+      const btn = L.DomUtil.create('a', '', container);
+      btn.href = '#';
+      btn.title = 'Моё местоположение';
+      btn.setAttribute('role', 'button');
+      btn.setAttribute('aria-label', 'Показать моё местоположение');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+        + '<circle cx="12" cy="12" r="4.5"/>'
+        + '<line x1="12" y1="1.5" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22.5"/>'
+        + '<line x1="1.5" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22.5" y2="12"/></svg>';
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.on(btn, 'click', L.DomEvent.stop);
+      L.DomEvent.on(btn, 'click', locateMe);
+      return container;
+    },
+  });
+  map.addControl(new LocateBtn());
+
   meetMarker = L.marker([point.lat, point.lng], { title: 'Точка встречи' }).addTo(map);
   meetMarker.bindPopup('Точка встречи');
+}
+
+function locateMe() {
+  if (!map) return;
+  if (currentPos) {
+    map.setView([currentPos.lat, currentPos.lng], Math.max(map.getZoom(), 16));
+    return;
+  }
+  const btn = document.querySelector('.leaflet-locate a');
+  if (btn) btn.classList.add('locating');
+  getCurrentPosition()
+    .then((pos) => {
+      currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setGpsStatus(true);
+      updateUserMarker();
+      maybeRefreshRoute();
+      map.setView([currentPos.lat, currentPos.lng], 16);
+    })
+    .catch(() => setGpsStatus(false))
+    .finally(() => { if (btn) btn.classList.remove('locating'); });
 }
 
 function startTracking(s) {
