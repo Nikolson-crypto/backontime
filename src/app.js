@@ -346,18 +346,28 @@ function updateCompass() {
 btnEnableCompass.addEventListener('click', enableCompass);
 
 function initMap(point) {
+  const esriRef = (service) => L.tileLayer(
+    `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/${service}/MapServer/tile/{z}/{y}/{x}`,
+    { maxZoom: 19, crossOrigin: true }
+  );
+  // Спутник + подписи улиц/названий сверху.
+  const satelliteLabelled = L.layerGroup([
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, crossOrigin: true, attribution: 'Спутник © Esri',
+    }),
+    esriRef('World_Transportation'),
+    esriRef('World_Boundaries_and_Places'),
+  ]);
+
   const baseLayers = {
     'Схема': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 20, subdomains: 'abcd', crossOrigin: true,
       attribution: '© OpenStreetMap · © CARTO',
     }),
-    'Спутник': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19, crossOrigin: true,
-      attribution: 'Спутник © Esri',
-    }),
-    'Топо': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      maxZoom: 17, subdomains: 'abc', crossOrigin: true,
-      attribution: '© OpenStreetMap · © OpenTopoMap (CC-BY-SA)',
+    'Спутник': satelliteLabelled,
+    'Природа': L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+      maxZoom: 20, subdomains: 'abc', crossOrigin: true,
+      attribution: '© OpenStreetMap · CyclOSM',
     }),
   };
 
