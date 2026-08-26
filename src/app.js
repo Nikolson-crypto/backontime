@@ -243,7 +243,7 @@ const compassArrow = el('compass-arrow');
 const compassDeg = el('compass-deg');
 const btnEnableCompass = el('btn-enable-compass');
 
-let map, meetMarker, userMarker, routeLine;
+let map, meetMarker, userMarker, routeLine, baseLayer;
 let watchId = null;
 let tickInterval = null;
 let wakeLock = null;
@@ -345,46 +345,69 @@ function updateCompass() {
 
 btnEnableCompass.addEventListener('click', enableCompass);
 
-function initMap(point) {
-  const esriRef = (service) => L.tileLayer(
-    `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/${service}/MapServer/tile/{z}/{y}/{x}`,
-    { maxZoom: 19, crossOrigin: true }
-  );
-  // Спутник + подписи улиц/названий сверху.
-  const satelliteLabelled = L.layerGroup([
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19, crossOrigin: true, attribution: 'Спутник © Esri',
-    }),
-    esriRef('World_Transportation'),
-    esriRef('World_Boundaries_and_Places'),
-  ]);
-
-  const baseLayers = {
-    'Схема': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+const MAP_LAYER_KEY = 'backontime.map.layer.v1';
+const esriRef = (service) => L.tileLayer(
+  `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/${service}/MapServer/tile/{z}/{y}/{x}`,
+  { maxZoom: 19, crossOrigin: true }
+);
+const BASE_LAYERS = {
+  scheme: {
+    label: 'Схема',
+    make: () => L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 20, subdomains: 'abcd', crossOrigin: true,
       attribution: '© OpenStreetMap · © CARTO',
     }),
-    'Спутник': satelliteLabelled,
-    'Природа': L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
-      maxZoom: 20, subdomains: 'abc', crossOrigin: true,
-      attribution: '© OpenStreetMap · CyclOSM',
-    }),
+  },
+  satellite: {
+    label: 'Спутник',
+    // Снимки Esri + подписи улиц и названий сверху.
+    make: () => L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, crossOrigin: true, attribution: 'Снимки © Esri, Maxar, Earthstar Geographics',
+      }),
+      esriRef('World_Transportation'),
+      esriRef('World_Boundaries_and_Places'),
+    ]),
+  },
+};
+
+function setBaseLayer(key) {
+  const cfg = BASE_LAYERS[key] || BASE_LAYERS.scheme;
+  if (baseLayer) map.removeLayer(baseLayer);
+  baseLayer = cfg.make().addTo(map);
+  try { localStorage.setItem(MAP_LAYER_KEY, BASE_LAYERS[key] ? key : 'scheme'); } catch {}
+}
+
+function addLayerSwitcher(activeKey) {
+  const control = L.control({ position: 'topright' });
+  control.onAdd = () => {
+    const box = L.DomUtil.create('div', 'layer-switch');
+    Object.entries(BASE_LAYERS).forEach(([key, cfg]) => {
+      const b = L.DomUtil.create('button', 'layer-btn' + (key === activeKey ? ' active' : ''), box);
+      b.type = 'button';
+      b.textContent = cfg.label;
+      b.dataset.key = key;
+      L.DomEvent.on(b, 'click', (e) => {
+        L.DomEvent.stop(e);
+        setBaseLayer(key);
+        box.querySelectorAll('.layer-btn').forEach((x) => x.classList.toggle('active', x.dataset.key === key));
+      });
+    });
+    L.DomEvent.disableClickPropagation(box);
+    return box;
   };
+  control.addTo(map);
+}
 
-  map = L.map('map', {
-    zoomControl: true,
-    attributionControl: false,
-    layers: [baseLayers['Схема']],
-  }).setView([point.lat, point.lng], 16);
+function initMap(point) {
+  map = L.map('map', { zoomControl: true, attributionControl: true }).setView([point.lat, point.lng], 16);
+  map.attributionControl.setPrefix('');
 
-  // Фосфорный тинт хорош для схемы/топо, но портит спутник — переключаем по слою.
-  const setLayerTint = (name) => {
-    map.getContainer().dataset.layer = name === 'Спутник' ? 'imagery' : 'map';
-  };
-  setLayerTint('Схема');
-  map.on('baselayerchange', (e) => setLayerTint(e.name));
-
-  L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+  let saved = null;
+  try { saved = localStorage.getItem(MAP_LAYER_KEY); } catch {}
+  const startKey = BASE_LAYERS[saved] ? saved : 'scheme';
+  setBaseLayer(startKey);
+  addLayerSwitcher(startKey);
 
   const LocateBtn = L.Control.extend({
     options: { position: 'topleft' },
@@ -471,7 +494,7 @@ function updateUserMarker() {
   if (!currentPos) return;
   if (!userMarker) {
     userMarker = L.circleMarker([currentPos.lat, currentPos.lng], {
-      radius: 8, color: '#baff29', fillColor: '#baff29', fillOpacity: 0.9,
+      radius: 8, color: '#ffffff', weight: 3, fillColor: '#3d8bff', fillOpacity: 1,
     }).addTo(map);
   } else {
     userMarker.setLatLng([currentPos.lat, currentPos.lng]);
@@ -502,7 +525,7 @@ async function maybeRefreshRoute() {
 
 function drawRoute(coords) {
   if (routeLine) map.removeLayer(routeLine);
-  routeLine = L.polyline(coords, { color: '#ffb020', weight: 4, opacity: 0.85 }).addTo(map);
+  routeLine = L.polyline(coords, { color: '#2f6fe0', weight: 5, opacity: 0.85 }).addTo(map);
 }
 
 function fmtDuration(ms) {

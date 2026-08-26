@@ -3,22 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#141712">
+<meta name="theme-color" content="#e6f0fc">
 <title>Назад вовремя</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
 
 <div class="chassis">
-  <span class="screw tl"></span><span class="screw tr"></span><span class="screw bl"></span><span class="screw br"></span>
   <div class="statusbar">
-    <span class="mark">НАЗАД · ВОВРЕМЯ</span>
+    <span class="mark">Назад вовремя</span>
     <span class="gps" id="gps-indicator"><span class="dot"></span><span id="gps-label">GPS…</span></span>
   </div>
 
@@ -27,8 +26,8 @@
   <!-- ===== SETUP SCREEN ===== -->
   <section id="screen-setup" class="panel">
     <header class="hero">
-      <h1>Прибор возврата</h1>
-      <p class="subtitle">Отметьте точку встречи — прибор подскажет, когда пора возвращаться, чтобы успеть.</p>
+      <h1>Вернуться вовремя</h1>
+      <p class="subtitle">Отметьте точку встречи — приложение подскажет, когда пора идти назад, чтобы успеть.</p>
     </header>
 
     <p id="join-banner" class="join-banner hidden"></p>
@@ -129,7 +128,6 @@
     </div>
 
     <div class="map-wrap">
-      <span class="plot-tag">План</span>
       <div id="map"></div>
     </div>
 
