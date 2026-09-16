@@ -1,1 +1,6 @@
 .claude/
+.DS_Store
+.env
+node_modules/
+dist/
+graphify-out/
