@@ -2,7 +2,7 @@
   "name": "Назад вовремя",
   "short_name": "Назад вовремя",
   "description": "Подскажет, когда пора возвращаться к точке встречи",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#e6f0fc",
   "theme_color": "#e6f0fc",

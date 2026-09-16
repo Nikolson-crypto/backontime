@@ -1,10 +1,11 @@
 # Архитектура Backontime
 
-_Версия 1 — 15.09.2026, этап 0 (документы). Обновлять после каждого эпика._
+_Версия 2 — 16.09.2026, после E0 (фундамент). Обновлять после каждого эпика._
 
 ## 1. Что есть сейчас
 
-Статический PWA без сборки, три файла.
+PWA на Vite, ES-модули, Vitest. Раздел ниже описывает блоки как они были в старом `app.js`
+и куда они переехали (E0 сделан: структура из §2 реализована).
 
 | Блок | Где | Что делает | Судьба |
 |---|---|---|---|
@@ -19,26 +20,34 @@ _Версия 1 — 15.09.2026, этап 0 (документы). Обновля�
 | Тексты | захардкожены по-русски в HTML/JS | — | вынести в переводы DA/EN (E0/E5) |
 
 Ограничения: iOS не выполняет JS в фоне → сигнал при закрытом приложении невозможен
-без push-сервера; OSRM демо-сервер с лимитами; тестов нет; `app.js` ≈ 600 строк одним файлом.
+без push-сервера (E3/E4); OSRM демо-сервер с лимитами.
 
-## 2. Целевая структура (после E0)
+## 2. Структура кода
+
+Сделано в E0 (✓) и запланировано (→ эпик):
 
 ```
 src/
-  main.js            точка входа, роутинг экранов
-  i18n/              da.json, en.json, t()
-  geo/               position.js (GPS), route.js (OSRM + фолбэк), bearing.js
-  parking/           session.js (модель парковки), limits.js (расчёт выхода), rules.js (правила зоны)
-  alerts/            local.js (звук/вибрация/Notification), push.js (подписка Web Push)
-  map/               map.js, layers.js, zones.js
-  storage/           local.js, supabase.js
-  ui/                setup.js, tracking.js, onboarding.js
-sw.js                service worker: офлайн-оболочка, приём push
-tests/               Vitest: limits, status, bearing, rules
-supabase/            миграции, edge-функция расписания push
+  main.js            ✓ точка входа: язык, переводы, восстановление сессии / join-ссылка
+  i18n/              ✓ ru.json, en.json, da.json (= en до E5), index.js: t(), applyTranslations()
+  geo/               ✓ position.js (GPS), route.js (OSRM + haversine), bearing.js
+  parking/           ✓ limits.js (deadline, leaveBy, computeStatus — чистые), session.js (localStorage, share/join URL)
+                     → rules.js (правила зоны, E6)
+  alerts/            ✓ local.js (звук/вибрация/Notification)   → push.js (Web Push, E3/E4)
+  map/               ✓ map.js, layers.js                        → zones.js (E6)
+  ui/                ✓ setup.js, tracking.js, compass.js, format.js   → onboarding.js (E5)
+  storage/           → supabase.js (E3)
+public/              ✓ manifest.json, icon.svg
+sw.js                → service worker (E3)
+tests/               ✓ limits, geo, session+i18n (25 тестов)
+supabase/            → миграции, edge-функция расписания push (E3)
+.github/workflows/   ✓ ci.yml (тесты на PR), deploy.yml (Pages из main)
 ```
 
-Правило: один файл < 500 строк; чистые функции расчёта отделены от DOM, чтобы их тестировать.
+Экраны получают колбэки (`onStart`, `onGpsStatus`) из `main.js`, а не импортируют друг друга.
+Все тексты — через `t('ключ', {параметры})`; в HTML — атрибуты `data-i18n*`.
+
+Правило: один файл < 500 строк (сейчас самый большой — `ui/tracking.js`, 170 строк); чистые функции расчёта отделены от DOM и покрыты тестами.
 
 ## 3. Схема данных (набросок, уточняется в E2/E3/E6)
 
