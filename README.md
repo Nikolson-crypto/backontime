@@ -49,8 +49,9 @@ npm test           # тесты Vitest
 npm run build      # сборка в dist/
 ```
 
-Секретов пока нет. После подключения Supabase (ADR-002) ключи будут в `.env`
-(в `.gitignore`), пример — в `.env.example`.
+Секреты — в `.env` (в `.gitignore`), пример в `.env.example`. Сейчас там один ключ:
+`VITE_CARTO_KEY` для карт CARTO (бесплатно на https://carto.com/basemaps/apikey); без него
+схема берётся с OpenStreetMap. На GitHub тот же ключ хранится в секретах репозитория.
 
 Деплой: `git push` в `main` → GitHub Actions собирает и выкладывает на Pages за 1–2 минуты. Ветки и PR прогоняют только тесты.
 

@@ -9,13 +9,26 @@ const esriRef = (service) => L.tileLayer(
   { maxZoom: 19, crossOrigin: true },
 );
 
+// Ключ CARTO: локально из .env (VITE_CARTO_KEY), на GitHub — из секрета. Без ключа — OpenStreetMap.
+const CARTO_KEY = import.meta.env.VITE_CARTO_KEY;
+
+function schemeLayer() {
+  if (CARTO_KEY) {
+    return L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, {
+      maxZoom: 20, subdomains: 'abcd', crossOrigin: true,
+      attribution: '© OpenStreetMap · © CARTO',
+    });
+  }
+  return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, crossOrigin: true,
+    attribution: '© OpenStreetMap contributors',
+  });
+}
+
 export const BASE_LAYERS = {
   scheme: {
     labelKey: 'map.scheme',
-    make: () => L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20, subdomains: 'abcd', crossOrigin: true,
-      attribution: '© OpenStreetMap · © CARTO',
-    }),
+    make: schemeLayer,
   },
   satellite: {
     labelKey: 'map.satellite',
