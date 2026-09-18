@@ -11,6 +11,7 @@
   "setup.point.locating": "Finding your location…",
   "setup.point.none": "Car not marked yet",
   "setup.point.marked": "Car marked (accuracy ~{accuracy} m)",
+  "setup.point.adjusted": "Spot adjusted by hand",
   "setup.point.fromLink": "Car location received from a link",
   "setup.point.noteLabel": "Landmark (optional)",
   "setup.point.notePlaceholder": "E.g. grey garage, level 2, bay 14",

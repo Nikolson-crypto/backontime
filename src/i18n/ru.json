@@ -11,6 +11,7 @@
   "setup.point.locating": "Определяем местоположение…",
   "setup.point.none": "Машина ещё не отмечена",
   "setup.point.marked": "Машина отмечена (точность ~{accuracy} м)",
+  "setup.point.adjusted": "Место уточнено вручную",
   "setup.point.fromLink": "Место машины получено по ссылке",
   "setup.point.noteLabel": "Ориентир (необязательно)",
   "setup.point.notePlaceholder": "Например: серый паркинг, 2 этаж, место 14",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseJoinParams, buildShareUrl, isResumable } from '../src/parking/session.js';
+import { parseJoinParams, buildShareUrl, isResumable, applyManualPoint } from '../src/parking/session.js';
 import { detectLocale, t, setLocale } from '../src/i18n/index.js';
 import { fmtDuration, formatDistance } from '../src/ui/format.js';
 
@@ -33,6 +33,24 @@ describe('isResumable', () => {
   });
   it('нет — без сессии', () => {
     expect(isResumable(null)).toBe(false);
+  });
+});
+
+describe('applyManualPoint', () => {
+  const point = { lat: 55.6761, lng: 12.5683, note: 'серый паркинг, 2 этаж', photo: 'data:image/jpeg;base64,xxx' };
+
+  it('берёт координаты тапа и сохраняет заметку и фото', () => {
+    const moved = applyManualPoint(point, { lat: 55.6768, lng: 12.5691 });
+    expect(moved.lat).toBeCloseTo(55.6768, 6);
+    expect(moved.lng).toBeCloseTo(12.5691, 6);
+    expect(moved.note).toBe(point.note);
+    expect(moved.photo).toBe(point.photo);
+  });
+
+  it('не меняет исходную точку', () => {
+    applyManualPoint(point, { lat: 0.1, lng: 0.2 });
+    expect(point.lat).toBeCloseTo(55.6761, 6);
+    expect(point.lng).toBeCloseTo(12.5683, 6);
   });
 });
 

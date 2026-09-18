@@ -25,6 +25,14 @@ export function isResumable(session, now = Date.now()) {
   return Boolean(session && session.point && session.startTime + session.durationMs > now - RESUME_GRACE_MS);
 }
 
+/**
+ * Точка с координатами, уточнёнными тапом по карте.
+ * Заметка, фото и прочие поля точки сохраняются.
+ */
+export function applyManualPoint(point, latlng) {
+  return { ...point, lat: latlng.lat, lng: latlng.lng };
+}
+
 /** Разбор ссылки вида ?lat=..&lng=..&deadline=..&note=.. */
 export function parseJoinParams(search) {
   const params = new URLSearchParams(search);

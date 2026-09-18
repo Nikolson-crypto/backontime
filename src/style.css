@@ -331,6 +331,15 @@ html, body {
 }
 #map { height: 230px; }
 
+/* Карта уточнения места на экране настройки */
+.setup-map {
+  height: 220px;
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
 .leaflet-control-zoom a {
   background: #fff !important;
   color: var(--ink) !important;
