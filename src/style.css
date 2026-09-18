@@ -344,6 +344,21 @@ html, body {
 .leaflet-locate a.locating svg { animation: locate-pulse 1s ease-in-out infinite; }
 @keyframes locate-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+/* Место машины на карте — белый круг с тенью и силуэтом машины */
+.car-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--primary);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(45, 90, 160, 0.28);
+}
+.car-marker svg { width: 26px; height: 26px; fill: currentColor; }
+
 /* Переключатель слоёв карты — мягкая белая «таблетка» */
 .layer-switch {
   display: flex;
