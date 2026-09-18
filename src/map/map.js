@@ -1,15 +1,28 @@
-// Карта Leaflet: точка встречи, метка пользователя, маршрут, кнопка «где я».
+// Карта Leaflet: место машины, метка пользователя, маршрут, кнопка «где я».
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { t } from '../i18n/index.js';
 import { savedLayerKey, setBaseLayer, addLayerSwitcher } from './layers.js';
 
-// После сборки Leaflet не находит свои картинки маркера сам — задаём пути явно.
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconUrl: markerIcon, iconRetinaUrl: markerIcon2x, shadowUrl: markerShadow });
+// Силуэт машины (вид сбоку) — заливка задаётся в CSS через currentColor.
+const CAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M5.3 10.4l1.5-3.6A2.2 2.2 0 018.9 5.4h6.2c.9 0 1.7.5 2.1 1.4l1.5 3.6'
+  + 'c.8.3 1.3 1 1.3 1.9v3.4c0 .5-.4.9-.9.9h-.8v.7c0 .6-.5 1.1-1.1 1.1h-.5'
+  + 'c-.6 0-1.1-.5-1.1-1.1v-.7H8.4v.7c0 .6-.5 1.1-1.1 1.1h-.5c-.6 0-1.1-.5-1.1-1.1v-.7h-.8'
+  + 'c-.5 0-.9-.4-.9-.9v-3.4c0-.9.5-1.6 1.3-1.9zm1.9-.3h9.6l-1.1-2.7a.7.7 0 00-.6-.4H8.9'
+  + 'a.7.7 0 00-.6.4zM7.6 14a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2zm8.8 0a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z"/>'
+  + '</svg>';
+
+/** Иконка места парковки: белый круг с тенью и силуэтом машины внутри. */
+export function carIcon() {
+  return L.divIcon({
+    className: 'car-marker',
+    html: CAR_SVG,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40], // якорь — центр-низ
+    popupAnchor: [0, -38],
+  });
+}
 
 let map = null;
 let baseLayer = null;
@@ -45,7 +58,9 @@ export function initMap(point, { onLocate }) {
   });
   map.addControl(new LocateBtn());
 
-  L.marker([point.lat, point.lng], { title: t('map.meetingPoint') }).addTo(map).bindPopup(t('map.meetingPoint'));
+  L.marker([point.lat, point.lng], { icon: carIcon(), title: t('map.meetingPoint') })
+    .addTo(map)
+    .bindPopup(t('map.meetingPoint'));
   return map;
 }
 

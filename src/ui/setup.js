@@ -1,7 +1,8 @@
 // Экран настройки: отметить точку, выбрать время, темп, запас → сессия.
 import { t } from '../i18n/index.js';
 import { getCurrentPosition, geoErrorKey } from '../geo/position.js';
-import { saveSession } from '../parking/session.js';
+import { saveSession, applyManualPoint } from '../parking/session.js';
+import { showSetupMap } from './setup-map.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -38,6 +39,13 @@ function selectPreset(btn) {
   [...presets.children].forEach((c) => c.classList.toggle('selected', c === btn));
 }
 
+/** Тап по карте: место машины уточнено вручную. */
+function onManualMove(latlng) {
+  markedPoint = applyManualPoint(markedPoint, latlng);
+  el('point-status').textContent = t('setup.point.adjusted');
+  updateStartButton();
+}
+
 /** Предзаполнить экран точкой из join-ссылки. */
 export function applyJoinParams(join) {
   markedPoint = { lat: join.lat, lng: join.lng, note: join.note };
@@ -51,6 +59,7 @@ export function applyJoinParams(join) {
   const banner = el('join-banner');
   banner.textContent = t('setup.join.banner', { minutes: minutesLeft });
   banner.classList.remove('hidden');
+  showSetupMap(markedPoint, onManualMove);
   updateStartButton();
 }
 
@@ -103,6 +112,7 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
       el('point-status').textContent = t('setup.point.marked', { accuracy: Math.round(pos.coords.accuracy) });
       btnMark.textContent = t('setup.point.remark');
       el('point-details').classList.remove('hidden');
+      showSetupMap(markedPoint, onManualMove);
       onGpsStatus(true);
     } catch (err) {
       el('setup-error').textContent = t('setup.error.geo', { reason: t(geoErrorKey(err)) });

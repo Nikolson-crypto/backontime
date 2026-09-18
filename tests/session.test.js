@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseJoinParams, buildShareUrl, isResumable } from '../src/parking/session.js';
+import { parseJoinParams, buildShareUrl, isResumable, applyManualPoint } from '../src/parking/session.js';
 import { detectLocale, t, setLocale } from '../src/i18n/index.js';
 import { fmtDuration, formatDistance } from '../src/ui/format.js';
 
@@ -8,9 +8,11 @@ const MIN = 60 * 1000;
 describe('join-ссылка', () => {
   const session = { point: { lat: 55.6761, lng: 12.5683, note: 'красная скамейка' }, startTime: 1000 * MIN, durationMs: 60 * MIN };
 
-  it('buildShareUrl → parseJoinParams — круг замыкается', () => {
+  it('buildShareUrl → parseJoinParams — круг замыкается, версия формата v=1', () => {
     const url = buildShareUrl(session, 'https://example.org/backontime/?foo=bar');
+    expect(url).toContain('v=1');
     const join = parseJoinParams(new URL(url).search);
+    expect(join.version).toBe(1);
     expect(join.lat).toBeCloseTo(55.6761, 5);
     expect(join.lng).toBeCloseTo(12.5683, 5);
     expect(join.deadline).toBe(1060 * MIN);
@@ -18,8 +20,17 @@ describe('join-ссылка', () => {
     expect(url).not.toContain('foo');
   });
 
+  it('старая ссылка без v продолжает работать', () => {
+    const join = parseJoinParams('?lat=55.676100&lng=12.568300&deadline=' + 1060 * MIN + '&note=%D1%85');
+    expect(join.version).toBe(0);
+    expect(join.lat).toBeCloseTo(55.6761, 5);
+    expect(join.lng).toBeCloseTo(12.5683, 5);
+    expect(join.deadline).toBe(1060 * MIN);
+    expect(join.note).toBe('х');
+  });
+
   it('без координат → null', () => {
-    expect(parseJoinParams('?note=x')).toBeNull();
+    expect(parseJoinParams('?v=1&note=x')).toBeNull();
   });
 });
 
@@ -36,6 +47,24 @@ describe('isResumable', () => {
   });
 });
 
+describe('applyManualPoint', () => {
+  const point = { lat: 55.6761, lng: 12.5683, note: 'серый паркинг, 2 этаж', photo: 'data:image/jpeg;base64,xxx' };
+
+  it('берёт координаты тапа и сохраняет заметку и фото', () => {
+    const moved = applyManualPoint(point, { lat: 55.6768, lng: 12.5691 });
+    expect(moved.lat).toBeCloseTo(55.6768, 6);
+    expect(moved.lng).toBeCloseTo(12.5691, 6);
+    expect(moved.note).toBe(point.note);
+    expect(moved.photo).toBe(point.photo);
+  });
+
+  it('не меняет исходную точку', () => {
+    applyManualPoint(point, { lat: 0.1, lng: 0.2 });
+    expect(point.lat).toBeCloseTo(55.6761, 6);
+    expect(point.lng).toBeCloseTo(12.5683, 6);
+  });
+});
+
 describe('i18n', () => {
   it('detectLocale: сохранённый > язык телефона > en', () => {
     expect(detectLocale('da-DK', null)).toBe('da');
@@ -45,7 +74,7 @@ describe('i18n', () => {
   });
   it('подстановка параметров и форматы', () => {
     setLocale('ru');
-    expect(t('setup.point.marked', { accuracy: 12 })).toBe('Точка отмечена (точность ~12 м)');
+    expect(t('setup.point.marked', { accuracy: 12 })).toBe('Машина отмечена (точность ~12 м)');
     expect(fmtDuration(65 * MIN)).toBe('1ч 5м');
     expect(fmtDuration(-90 * 1000)).toBe('-1м 30с');
     expect(formatDistance(1234)).toBe('1.23 км');

@@ -331,6 +331,15 @@ html, body {
 }
 #map { height: 230px; }
 
+/* Карта уточнения места на экране настройки */
+.setup-map {
+  height: 220px;
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
 .leaflet-control-zoom a {
   background: #fff !important;
   color: var(--ink) !important;
@@ -343,6 +352,21 @@ html, body {
 .leaflet-locate svg { width: 18px; height: 18px; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; }
 .leaflet-locate a.locating svg { animation: locate-pulse 1s ease-in-out infinite; }
 @keyframes locate-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Место машины на карте — белый круг с тенью и силуэтом машины */
+.car-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--primary);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(45, 90, 160, 0.28);
+}
+.car-marker svg { width: 26px; height: 26px; fill: currentColor; }
 
 /* Переключатель слоёв карты — мягкая белая «таблетка» */
 .layer-switch {
