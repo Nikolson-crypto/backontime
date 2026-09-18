@@ -45,7 +45,7 @@ describe('i18n', () => {
   });
   it('подстановка параметров и форматы', () => {
     setLocale('ru');
-    expect(t('setup.point.marked', { accuracy: 12 })).toBe('Точка отмечена (точность ~12 м)');
+    expect(t('setup.point.marked', { accuracy: 12 })).toBe('Машина отмечена (точность ~12 м)');
     expect(fmtDuration(65 * MIN)).toBe('1ч 5м');
     expect(fmtDuration(-90 * 1000)).toBe('-1м 30с');
     expect(formatDistance(1234)).toBe('1.23 км');
