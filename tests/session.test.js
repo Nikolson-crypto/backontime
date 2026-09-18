@@ -8,9 +8,11 @@ const MIN = 60 * 1000;
 describe('join-ссылка', () => {
   const session = { point: { lat: 55.6761, lng: 12.5683, note: 'красная скамейка' }, startTime: 1000 * MIN, durationMs: 60 * MIN };
 
-  it('buildShareUrl → parseJoinParams — круг замыкается', () => {
+  it('buildShareUrl → parseJoinParams — круг замыкается, версия формата v=1', () => {
     const url = buildShareUrl(session, 'https://example.org/backontime/?foo=bar');
+    expect(url).toContain('v=1');
     const join = parseJoinParams(new URL(url).search);
+    expect(join.version).toBe(1);
     expect(join.lat).toBeCloseTo(55.6761, 5);
     expect(join.lng).toBeCloseTo(12.5683, 5);
     expect(join.deadline).toBe(1060 * MIN);
@@ -18,8 +20,17 @@ describe('join-ссылка', () => {
     expect(url).not.toContain('foo');
   });
 
+  it('старая ссылка без v продолжает работать', () => {
+    const join = parseJoinParams('?lat=55.676100&lng=12.568300&deadline=' + 1060 * MIN + '&note=%D1%85');
+    expect(join.version).toBe(0);
+    expect(join.lat).toBeCloseTo(55.6761, 5);
+    expect(join.lng).toBeCloseTo(12.5683, 5);
+    expect(join.deadline).toBe(1060 * MIN);
+    expect(join.note).toBe('х');
+  });
+
   it('без координат → null', () => {
-    expect(parseJoinParams('?note=x')).toBeNull();
+    expect(parseJoinParams('?v=1&note=x')).toBeNull();
   });
 });
 
