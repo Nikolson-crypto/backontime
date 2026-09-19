@@ -161,8 +161,15 @@ html, body {
   box-shadow: 0 5px 14px rgba(61, 139, 255, 0.3);
 }
 
+/* Панель выбранного типа лимита: P-skive / оплачено до / без лимита */
+.limit-panel { margin-top: 12px; }
+.limit-panel .hint { text-align: left; margin-top: 8px; }
+#limit-error:empty { min-height: 0; }
+#limit-error { margin: 8px 0 0; }
+
 .custom-duration input,
 .point-details input[type="text"],
+.field input[type="time"],
 .field select {
   width: 100%;
   background: var(--surface-soft);
@@ -178,6 +185,7 @@ html, body {
 .point-details input::placeholder { color: var(--ink-soft); opacity: 0.75; }
 .custom-duration input:focus,
 .point-details input[type="text"]:focus,
+.field input[type="time"]:focus,
 .field select:focus {
   outline: none;
   border-color: var(--primary);

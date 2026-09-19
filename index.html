@@ -49,17 +49,37 @@
     </div>
 
     <div class="card">
-      <h2 data-i18n="setup.time.heading">02 · Сколько у вас времени</h2>
-      <div class="presets" id="duration-presets">
-        <button class="chip" data-min="30" data-i18n="setup.time.30">30 мин</button>
-        <button class="chip" data-min="60" data-i18n="setup.time.60">1 ч</button>
-        <button class="chip" data-min="90" data-i18n="setup.time.90">1.5 ч</button>
-        <button class="chip" data-min="120" data-i18n="setup.time.120">2 ч</button>
-        <button class="chip" data-min="180" data-i18n="setup.time.180">3 ч</button>
+      <h2 data-i18n="setup.limit.heading">02 · Какой лимит</h2>
+      <div class="presets" id="limit-type">
+        <button class="chip selected" data-type="pskive" data-i18n="setup.limit.pskive">P-skive</button>
+        <button class="chip" data-type="paid_until" data-i18n="setup.limit.paid">Оплачено до</button>
+        <button class="chip" data-type="none" data-i18n="setup.limit.none">Без лимита</button>
       </div>
-      <div class="custom-duration">
-        <input type="number" id="custom-minutes" min="1" max="720" data-i18n-placeholder="setup.time.customPlaceholder" placeholder="или своё, мин">
+
+      <div class="limit-panel" id="limit-panel-pskive">
+        <div class="presets" id="duration-presets">
+          <button class="chip" data-hours="1" data-i18n="setup.limit.h1">1 ч</button>
+          <button class="chip" data-hours="2" data-i18n="setup.limit.h2">2 ч</button>
+          <button class="chip" data-hours="3" data-i18n="setup.limit.h3">3 ч</button>
+        </div>
+        <div class="custom-duration">
+          <input type="number" id="custom-minutes" min="1" max="720" data-i18n-placeholder="setup.time.customPlaceholder" placeholder="или своё, мин">
+        </div>
       </div>
+
+      <div class="limit-panel hidden" id="limit-panel-paid">
+        <label class="field">
+          <span data-i18n="setup.limit.paidLabel">До какого времени оплачено</span>
+          <input type="time" id="paid-until">
+        </label>
+        <p class="hint" data-i18n="setup.limit.paidHint">Время из EasyPark / ParkOne / паркомата</p>
+      </div>
+
+      <div class="limit-panel hidden" id="limit-panel-none">
+        <p class="hint" data-i18n="setup.limit.noneHint">Напоминаний не будет, только дорога до машины</p>
+      </div>
+
+      <p id="limit-error" class="error"></p>
     </div>
 
     <div class="card">
