@@ -436,8 +436,22 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-.row-buttons { display: flex; gap: 12px; }
-.row-buttons .key { flex: 1; }
+.row-buttons { display: flex; gap: 8px; }
+.row-buttons .key { flex: 1; padding: 14px 8px; font-size: 0.86rem; white-space: nowrap; }
+
+/* Меню продления лимита над кнопками */
+.extend-sheet {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 12px 4px;
+  box-shadow: var(--shadow);
+}
+.extend-sheet .presets { margin-bottom: 0; }
+.extend-paid { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.extend-paid .field { flex: 1; margin-bottom: 0; }
+#extend-error { margin: 6px 0 0; }
+#extend-error:empty { min-height: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse, .dot, .leaflet-locate a.locating svg { animation: none !important; }

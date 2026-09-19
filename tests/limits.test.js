@@ -6,6 +6,8 @@ import {
   deadlineOf,
   limitUntilFor,
   timestampForHHMM,
+  extendSession,
+  statusFor,
   WARN_BEFORE_MS,
 } from '../src/parking/limits.js';
 
@@ -109,5 +111,51 @@ describe('computeStatus', () => {
   it('без запаса и с нулевой дорогой выход = дедлайн', () => {
     const s = computeStatus({ now: 0, deadline: 10 * MIN, walkMs: 0, bufferMs: 0 });
     expect(s.leaveAt).toBe(10 * MIN);
+  });
+});
+
+describe('extendSession', () => {
+  const session = { id: 'a', limitType: 'pskive', limitUntil: NOW + 10 * MIN, bufferMs: 5 * MIN };
+
+  it('+30 минут считаются от текущего конца лимита', () => {
+    expect(extendSession(session, { addMs: 30 * MIN }).limitUntil).toBe(NOW + 40 * MIN);
+  });
+
+  it('продление «до HH:MM»', () => {
+    const until = timestampForHHMM('15:00', NOW);
+    expect(extendSession(session, { untilTs: until }).limitUntil).toBe(until);
+  });
+
+  it('без лимита считаем от «сейчас»', () => {
+    const none = { limitType: 'none', limitUntil: null };
+    expect(extendSession(none, { addMs: 15 * MIN, now: NOW }).limitUntil).toBe(NOW + 15 * MIN);
+  });
+
+  it('исходную сессию не меняет и остальные поля сохраняет', () => {
+    const next = extendSession(session, { addMs: 30 * MIN });
+    expect(session.limitUntil).toBe(NOW + 10 * MIN);
+    expect(next.id).toBe('a');
+    expect(next.bufferMs).toBe(5 * MIN);
+  });
+});
+
+describe('statusFor', () => {
+  it('без лимита статуса нет — значит, нет и тревоги', () => {
+    const none = { limitType: 'none', limitUntil: null, bufferMs: 5 * MIN };
+    expect(statusFor(none, { now: NOW, walkMs: 20 * MIN })).toBeNull();
+  });
+
+  it('с лимитом считает как computeStatus', () => {
+    const session = { limitType: 'pskive', limitUntil: NOW + 120 * MIN, bufferMs: 5 * MIN };
+    const s = statusFor(session, { now: NOW, walkMs: 20 * MIN });
+    expect(s.level).toBe('ok');
+    expect(s.timeUntilLeave).toBe(95 * MIN);
+  });
+
+  it('лимит вот-вот кончится → danger и тревога; после продления снова ok', () => {
+    const session = { limitType: 'pskive', limitUntil: NOW + 1 * MIN, bufferMs: 5 * MIN };
+    expect(statusFor(session, { now: NOW, walkMs: 2 * MIN }).alarm).toBe(true);
+    const extended = extendSession(session, { addMs: 30 * MIN });
+    expect(statusFor(extended, { now: NOW, walkMs: 2 * MIN }).level).toBe('ok');
   });
 });

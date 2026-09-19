@@ -47,6 +47,11 @@ export function migrateLegacySession(old) {
   };
 }
 
+/** Парковка завершена: время окончания и статус 'ended'. */
+export function recordEnded(session, now = Date.now()) {
+  return { ...session, endedAt: now, status: 'ended' };
+}
+
 export function saveSession(session) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }

@@ -47,6 +47,16 @@ export function deadlineOf(session) {
   return session.startTime + session.durationMs;
 }
 
+/**
+ * Продлить лимит: на addMs миллисекунд от текущего конца лимита
+ * либо до момента untilTs. Возвращает новую сессию, старую не меняет.
+ */
+export function extendSession(session, { addMs, untilTs, now = Date.now() } = {}) {
+  if (typeof untilTs === 'number') return { ...session, limitUntil: untilTs };
+  if (typeof addMs === 'number') return { ...session, limitUntil: (session.limitUntil ?? now) + addMs };
+  return session;
+}
+
 /** Момент, когда надо выйти: дедлайн минус дорога минус запас. */
 export function leaveByTime(deadline, walkMs, bufferMs) {
   return deadline - walkMs - bufferMs;
@@ -80,4 +90,14 @@ export function computeStatus({ now, deadline, walkMs, bufferMs }) {
     timeUntilDeadline,
     alarm: level === 'danger',
   };
+}
+
+/**
+ * Статус по сессии: обёртка над computeStatus.
+ * Для лимита 'none' (и вообще без limitUntil) статуса и тревоги нет — возвращает null.
+ */
+export function statusFor(session, { now = Date.now(), walkMs } = {}) {
+  const deadline = deadlineOf(session);
+  if (!session || session.limitType === 'none' || deadline === null) return null;
+  return computeStatus({ now, deadline, walkMs, bufferMs: session.bufferMs });
 }

@@ -168,9 +168,26 @@
       </div>
     </div>
 
+    <div id="extend-sheet" class="extend-sheet hidden">
+      <div class="presets" id="extend-presets">
+        <button class="chip" data-add="15" data-i18n="tracking.extend.15">+15 мин</button>
+        <button class="chip" data-add="30" data-i18n="tracking.extend.30">+30 мин</button>
+        <button class="chip" data-add="60" data-i18n="tracking.extend.60">+1 ч</button>
+      </div>
+      <div id="extend-paid" class="extend-paid hidden">
+        <label class="field">
+          <span data-i18n="tracking.extend.untilLabel">до</span>
+          <input type="time" id="extend-until">
+        </label>
+        <button id="btn-extend-apply" class="btn btn-sm" data-i18n="tracking.extend.apply">Применить</button>
+      </div>
+      <p id="extend-error" class="error"></p>
+    </div>
+
     <div class="row-buttons">
+      <button id="btn-extend" class="key" data-i18n="tracking.extend">＋ Продлить</button>
       <button id="btn-share" class="key" data-i18n="tracking.share">⤴ Поделиться</button>
-      <button id="btn-stop" class="key primary" data-i18n="tracking.stop">■ Завершить</button>
+      <button id="btn-stop" class="key primary" data-i18n="tracking.stop">■ Я у машины</button>
     </div>
     <p id="share-status" class="hint"></p>
   </section>

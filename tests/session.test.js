@@ -7,6 +7,7 @@ import {
   createSession,
   migrateLegacySession,
   loadSession,
+  recordEnded,
 } from '../src/parking/session.js';
 import { detectLocale, t, setLocale } from '../src/i18n/index.js';
 import { fmtDuration, formatDistance } from '../src/ui/format.js';
@@ -206,5 +207,17 @@ describe('i18n', () => {
   });
   it('неизвестный ключ возвращает сам ключ', () => {
     expect(t('nope.key')).toBe('nope.key');
+  });
+});
+
+describe('recordEnded', () => {
+  const session = { id: 'a', point: {}, limitType: 'pskive', limitUntil: 60 * MIN, startedAt: 0, status: 'active' };
+
+  it('ставит endedAt и статус ended, остальное сохраняет', () => {
+    const ended = recordEnded(session, 42 * MIN);
+    expect(ended.endedAt).toBe(42 * MIN);
+    expect(ended.status).toBe('ended');
+    expect(ended.id).toBe('a');
+    expect(session.status).toBe('active');
   });
 });
