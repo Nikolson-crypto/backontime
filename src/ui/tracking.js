@@ -4,6 +4,7 @@ import { getCurrentPosition, watchPosition, geoErrorKey } from '../geo/position.
 import { fetchWalkingRoute, haversineMeters } from '../geo/route.js';
 import { statusFor, deadlineOf, estimateWalkMs, extendSession, timestampForHHMM } from '../parking/limits.js';
 import { clearSession, saveSession, recordEnded, buildShareUrl } from '../parking/session.js';
+import { rememberSession } from '../parking/history.js';
 import { fireAlarmOnce, silenceAlarm, stopAlarm } from '../alerts/local.js';
 import { initMap, updateUserMarker, drawRoute, centerOn, setLocating } from '../map/map.js';
 import { initCompass, updateCompass } from './compass.js';
@@ -173,7 +174,8 @@ function stop() {
   if (tickInterval) clearInterval(tickInterval);
   silenceAlarm();
   if (wakeLock) wakeLock.release().catch(() => {});
-  session = recordEnded(session); // endedAt + status 'ended'; в E2-4 запись уходит в историю
+  session = recordEnded(session);
+  rememberSession(session); // обновляем запись истории по id: теперь с endedAt
   clearSession();
   window.location.reload();
 }

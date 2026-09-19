@@ -104,7 +104,12 @@
       </label>
     </div>
 
-    <button id="btn-start" class="btn btn-primary btn-lg" data-i18n="setup.start" disabled>Начать отсчёт</button>
+    <div class="card hidden" id="history-card">
+      <h2 data-i18n="setup.history.heading">Последние парковки</h2>
+      <div id="history-list" class="history-list"></div>
+    </div>
+
+    <button id="btn-start" class="btn btn-primary btn-lg" data-i18n="setup.start" disabled>Я припарковался</button>
     <p id="setup-error" class="error"></p>
   </section>
 

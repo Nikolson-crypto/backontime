@@ -200,6 +200,25 @@ html, body {
 .point-details { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 .photo-preview { margin-top: 8px; max-width: 100%; max-height: 160px; border-radius: 12px; object-fit: cover; }
 
+/* Карточка «Последние парковки» */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+}
+.history-row:active { transform: translateY(1px); }
+.history-note { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+.history-meta { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
+
 .join-banner {
   background: var(--primary-tint);
   border: 1px solid #d5e6ff;

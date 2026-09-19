@@ -2,8 +2,10 @@
 import { t } from '../i18n/index.js';
 import { getCurrentPosition, geoErrorKey } from '../geo/position.js';
 import { saveSession, createSession, applyManualPoint } from '../parking/session.js';
+import { rememberSession } from '../parking/history.js';
 import { showSetupMap } from './setup-map.js';
 import { initLimitPanel, readLimit, setLimit } from './setup-limit.js';
+import { initHistory } from './setup-history.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -45,6 +47,17 @@ function onManualMove(latlng) {
   updateStartButton();
 }
 
+/** Тап по строке истории: ставим машину туда же, где она стояла в прошлый раз. */
+function pickFromHistory(entry) {
+  markedPoint = { lat: entry.lat, lng: entry.lng, note: entry.note || '' };
+  el('point-status').textContent = t('setup.point.fromHistory');
+  el('point-details').classList.remove('hidden');
+  el('point-note').value = markedPoint.note;
+  el('btn-mark-point').textContent = t('setup.point.remark');
+  showSetupMap(markedPoint, onManualMove);
+  updateStartButton();
+}
+
 /** Предзаполнить экран точкой из join-ссылки. */
 export function applyJoinParams(join) {
   markedPoint = { lat: join.lat, lng: join.lng, note: join.note };
@@ -80,6 +93,7 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
       updateStartButton();
     },
   });
+  initHistory({ onPick: pickFromHistory });
 
   noteInput.addEventListener('input', () => {
     if (markedPoint) markedPoint.note = noteInput.value.trim();
@@ -131,6 +145,7 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
       now,
     });
     saveSession(session);
+    rememberSession(session); // в истории видно и незавершённые парковки
     onStart(session);
   });
 }
