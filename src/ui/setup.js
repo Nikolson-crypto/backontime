@@ -47,9 +47,18 @@ function onManualMove(latlng) {
   updateStartButton();
 }
 
+/** Убрать выбранное фото: у новой точки его нет, старое показывать нельзя. */
+function clearPhoto() {
+  const preview = el('point-photo-preview');
+  preview.removeAttribute('src');
+  preview.classList.add('hidden');
+  el('point-photo').value = '';
+}
+
 /** Тап по строке истории: ставим машину туда же, где она стояла в прошлый раз. */
 function pickFromHistory(entry) {
   markedPoint = { lat: entry.lat, lng: entry.lng, note: entry.note || '' };
+  clearPhoto(); // в истории фото не хранится — прошлый снимок относился к другой отметке
   el('point-status').textContent = t('setup.point.fromHistory');
   el('point-details').classList.remove('hidden');
   el('point-note').value = markedPoint.note;
