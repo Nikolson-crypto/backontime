@@ -1,7 +1,53 @@
 import { describe, it, expect } from 'vitest';
-import { computeStatus, leaveByTime, estimateWalkMs, deadlineOf, WARN_BEFORE_MS } from '../src/parking/limits.js';
+import {
+  computeStatus,
+  leaveByTime,
+  estimateWalkMs,
+  deadlineOf,
+  limitUntilFor,
+  timestampForHHMM,
+  WARN_BEFORE_MS,
+} from '../src/parking/limits.js';
 
 const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+// Фиксированный момент «сейчас»: 18.09.2026, 12:00 по местному времени.
+const NOW = new Date(2026, 8, 18, 12, 0, 0, 0).getTime();
+
+describe('timestampForHHMM', () => {
+  it('«14:30» — это сегодня в 14:30', () => {
+    const ts = timestampForHHMM('14:30', NOW);
+    expect(new Date(ts).getHours()).toBe(14);
+    expect(new Date(ts).getMinutes()).toBe(30);
+    expect(ts).toBe(NOW + 2.5 * HOUR);
+  });
+  it('мусор вместо времени → null', () => {
+    expect(timestampForHHMM('', NOW)).toBeNull();
+    expect(timestampForHHMM('25:00', NOW)).toBeNull();
+    expect(timestampForHHMM(null, NOW)).toBeNull();
+  });
+});
+
+describe('limitUntilFor', () => {
+  it('P-skive: сейчас + часы (дробные тоже)', () => {
+    expect(limitUntilFor({ type: 'pskive', hours: 2, now: NOW })).toEqual({ until: NOW + 2 * HOUR, reason: null });
+    expect(limitUntilFor({ type: 'pskive', hours: 0.5, now: NOW })).toEqual({ until: NOW + 30 * MIN, reason: null });
+  });
+  it('P-skive без часов — выбор не сделан', () => {
+    expect(limitUntilFor({ type: 'pskive', now: NOW })).toEqual({ until: null, reason: 'invalid' });
+  });
+  it('Оплачено до: сегодня в указанное время', () => {
+    expect(limitUntilFor({ type: 'paid_until', paidUntilHHMM: '15:00', now: NOW }))
+      .toEqual({ until: NOW + 3 * HOUR, reason: null });
+  });
+  it('Оплачено до: время уже прошло → null и причина past', () => {
+    expect(limitUntilFor({ type: 'paid_until', paidUntilHHMM: '09:00', now: NOW }))
+      .toEqual({ until: null, reason: 'past' });
+  });
+  it('Без лимита: null, и это не ошибка', () => {
+    expect(limitUntilFor({ type: 'none', now: NOW })).toEqual({ until: null, reason: null });
+  });
+});
 
 describe('leaveByTime', () => {
   it('вычитает дорогу и запас из дедлайна', () => {
@@ -10,8 +56,14 @@ describe('leaveByTime', () => {
 });
 
 describe('deadlineOf', () => {
-  it('старт + длительность', () => {
+  it('старый формат: старт + длительность', () => {
     expect(deadlineOf({ startTime: 1000, durationMs: 500 })).toBe(1500);
+  });
+  it('новый формат: конец лимита', () => {
+    expect(deadlineOf({ limitType: 'pskive', limitUntil: 1500 })).toBe(1500);
+  });
+  it('без лимита дедлайна нет', () => {
+    expect(deadlineOf({ limitType: 'none', limitUntil: null })).toBeNull();
   });
 });
 

@@ -1,7 +1,8 @@
 // Экран настройки: отметить точку, выбрать время, темп, запас → сессия.
 import { t } from '../i18n/index.js';
 import { getCurrentPosition, geoErrorKey } from '../geo/position.js';
-import { saveSession, applyManualPoint } from '../parking/session.js';
+import { saveSession, createSession, applyManualPoint } from '../parking/session.js';
+import { limitUntilFor } from '../parking/limits.js';
 import { showSetupMap } from './setup-map.js';
 
 const el = (id) => document.getElementById(id);
@@ -125,13 +126,17 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
   });
 
   el('btn-start').addEventListener('click', () => {
-    const session = {
+    const now = Date.now();
+    // Пресеты минут — это P-skive с дробным числом часов.
+    const limit = limitUntilFor({ type: 'pskive', hours: selectedMinutes / 60, now });
+    const session = createSession({
       point: markedPoint,
-      startTime: Date.now(),
-      durationMs: selectedMinutes * 60 * 1000,
+      limitType: 'pskive',
+      limitUntil: limit.until,
       paceKmh: Number(el('pace-select').value),
       bufferMs: Number(el('buffer-select').value) * 60 * 1000,
-    };
+      now,
+    });
     saveSession(session);
     onStart(session);
   });
