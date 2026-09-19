@@ -1,12 +1,60 @@
-// Чистые расчёты времени: когда выходить и в каком мы статусе.
+// Чистые расчёты времени: когда кончается лимит, когда выходить и в каком мы статусе.
 // Никакого DOM — этот модуль покрыт тестами.
 
 export const WARN_BEFORE_MS = 5 * 60 * 1000;
 export const PATH_INEFFICIENCY_FACTOR = 1.3; // прямая линия × 1.3 ≈ реальная дорога
 
-/** Дедлайн сессии: старт + длительность. */
+const MS_PER_MINUTE = 60 * 1000;
+
+/** «14:30» сегодня → timestamp; неверный формат → null. */
+export function timestampForHHMM(hhmm, now = Date.now()) {
+  const parts = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm ?? '').trim());
+  if (!parts) return null;
+  const hours = Number(parts[1]);
+  const minutes = Number(parts[2]);
+  if (hours > 23 || minutes > 59) return null;
+  const date = new Date(now);
+  date.setHours(hours, minutes, 0, 0);
+  return date.getTime();
+}
+
+/**
+ * Момент окончания лимита по выбору на экране настройки.
+ * Возвращает { until, reason }: until — timestamp или null;
+ * reason — 'past' (время уже прошло), 'invalid' (ничего не выбрано) или null.
+ * Для типа 'none' лимита нет, и это не ошибка: { until: null, reason: null }.
+ */
+export function limitUntilFor({ type, hours, paidUntilHHMM, now = Date.now() }) {
+  if (type === 'none') return { until: null, reason: null };
+  if (type === 'pskive') {
+    const h = Number(hours);
+    if (!(h > 0)) return { until: null, reason: 'invalid' };
+    return { until: now + Math.round(h * 60) * MS_PER_MINUTE, reason: null };
+  }
+  if (type === 'paid_until') {
+    const until = timestampForHHMM(paidUntilHHMM, now);
+    if (until === null) return { until: null, reason: 'invalid' };
+    if (until <= now) return { until: null, reason: 'past' };
+    return { until, reason: null };
+  }
+  return { until: null, reason: 'invalid' };
+}
+
+/** Дедлайн сессии: конец лимита. Старый формат (v1) — старт + длительность. */
 export function deadlineOf(session) {
+  if (!session) return null;
+  if (session.limitType) return session.limitUntil ?? null;
   return session.startTime + session.durationMs;
+}
+
+/**
+ * Продлить лимит: на addMs миллисекунд от текущего конца лимита
+ * либо до момента untilTs. Возвращает новую сессию, старую не меняет.
+ */
+export function extendSession(session, { addMs, untilTs, now = Date.now() } = {}) {
+  if (typeof untilTs === 'number') return { ...session, limitUntil: untilTs };
+  if (typeof addMs === 'number') return { ...session, limitUntil: (session.limitUntil ?? now) + addMs };
+  return session;
 }
 
 /** Момент, когда надо выйти: дедлайн минус дорога минус запас. */
@@ -42,4 +90,14 @@ export function computeStatus({ now, deadline, walkMs, bufferMs }) {
     timeUntilDeadline,
     alarm: level === 'danger',
   };
+}
+
+/**
+ * Статус по сессии: обёртка над computeStatus.
+ * Для лимита 'none' (и вообще без limitUntil) статуса и тревоги нет — возвращает null.
+ */
+export function statusFor(session, { now = Date.now(), walkMs } = {}) {
+  const deadline = deadlineOf(session);
+  if (!session || session.limitType === 'none' || deadline === null) return null;
+  return computeStatus({ now, deadline, walkMs, bufferMs: session.bufferMs });
 }

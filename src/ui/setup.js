@@ -1,13 +1,16 @@
-// Экран настройки: отметить точку, выбрать время, темп, запас → сессия.
+// Экран настройки: отметить машину, выбрать лимит, темп, запас → сессия.
 import { t } from '../i18n/index.js';
 import { getCurrentPosition, geoErrorKey } from '../geo/position.js';
-import { saveSession, applyManualPoint } from '../parking/session.js';
+import { saveSession, createSession, applyManualPoint } from '../parking/session.js';
+import { rememberSession } from '../parking/history.js';
 import { showSetupMap } from './setup-map.js';
+import { initLimitPanel, readLimit, setLimit } from './setup-limit.js';
+import { initHistory } from './setup-history.js';
 
 const el = (id) => document.getElementById(id);
 
 let markedPoint = null; // {lat, lng, note?, photo?}
-let selectedMinutes = null;
+let limit = { type: 'pskive', until: null, reason: 'invalid' };
 
 function downscaleImage(file, maxDim, quality) {
   return new Promise((resolve, reject) => {
@@ -30,19 +33,37 @@ function downscaleImage(file, maxDim, quality) {
   });
 }
 
+/** Кнопка старта: активна, когда есть машина и понятный лимит; подпись зависит от типа. */
 function updateStartButton() {
-  el('btn-start').disabled = !(markedPoint && selectedMinutes > 0);
-}
-
-function selectPreset(btn) {
-  const presets = el('duration-presets');
-  [...presets.children].forEach((c) => c.classList.toggle('selected', c === btn));
+  const limitReady = limit.type === 'none' || limit.until !== null;
+  el('btn-start').disabled = !(markedPoint && limitReady);
+  el('btn-start').textContent = limit.type === 'none' ? t('setup.startNoLimit') : t('setup.start');
 }
 
 /** Тап по карте: место машины уточнено вручную. */
 function onManualMove(latlng) {
   markedPoint = applyManualPoint(markedPoint, latlng);
   el('point-status').textContent = t('setup.point.adjusted');
+  updateStartButton();
+}
+
+/** Убрать выбранное фото: у новой точки его нет, старое показывать нельзя. */
+function clearPhoto() {
+  const preview = el('point-photo-preview');
+  preview.removeAttribute('src');
+  preview.classList.add('hidden');
+  el('point-photo').value = '';
+}
+
+/** Тап по строке истории: ставим машину туда же, где она стояла в прошлый раз. */
+function pickFromHistory(entry) {
+  markedPoint = { lat: entry.lat, lng: entry.lng, note: entry.note || '' };
+  clearPhoto(); // в истории фото не хранится — прошлый снимок относился к другой отметке
+  el('point-status').textContent = t('setup.point.fromHistory');
+  el('point-details').classList.remove('hidden');
+  el('point-note').value = markedPoint.note;
+  el('btn-mark-point').textContent = t('setup.point.remark');
+  showSetupMap(markedPoint, onManualMove);
   updateStartButton();
 }
 
@@ -53,11 +74,16 @@ export function applyJoinParams(join) {
   el('point-details').classList.remove('hidden');
   el('point-note').value = join.note;
   el('btn-mark-point').textContent = t('setup.point.remark');
-  const minutesLeft = Math.max(1, Math.round((join.deadline - Date.now()) / 60000));
-  el('custom-minutes').value = minutesLeft;
-  selectedMinutes = minutesLeft;
   const banner = el('join-banner');
-  banner.textContent = t('setup.join.banner', { minutes: minutesLeft });
+  if (join.deadline) {
+    // В ссылке есть время — предлагаем тот же остаток как P-skive.
+    const minutesLeft = Math.max(1, Math.round((join.deadline - Date.now()) / 60000));
+    setLimit({ type: 'pskive', minutes: minutesLeft });
+    banner.textContent = t('setup.join.banner', { minutes: minutesLeft });
+  } else {
+    setLimit({ type: 'none' });
+    banner.textContent = t('setup.join.bannerNoLimit');
+  }
   banner.classList.remove('hidden');
   showSetupMap(markedPoint, onManualMove);
   updateStartButton();
@@ -69,8 +95,14 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
   const photoInput = el('point-photo');
   const preview = el('point-photo-preview');
   const btnMark = el('btn-mark-point');
-  const customInput = el('custom-minutes');
-  const presets = el('duration-presets');
+
+  initLimitPanel({
+    onChange: (next) => {
+      limit = next;
+      updateStartButton();
+    },
+  });
+  initHistory({ onPick: pickFromHistory });
 
   noteInput.addEventListener('input', () => {
     if (markedPoint) markedPoint.note = noteInput.value.trim();
@@ -84,22 +116,6 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
       preview.src = markedPoint.photo;
       preview.classList.remove('hidden');
     } catch { /* не удалось обработать фото — пропускаем */ }
-  });
-
-  presets.addEventListener('click', (e) => {
-    const btn = e.target.closest('.chip');
-    if (!btn) return;
-    selectedMinutes = Number(btn.dataset.min);
-    customInput.value = '';
-    selectPreset(btn);
-    updateStartButton();
-  });
-
-  customInput.addEventListener('input', () => {
-    const v = Number(customInput.value);
-    selectedMinutes = v > 0 ? v : null;
-    if (v > 0) selectPreset(null);
-    updateStartButton();
   });
 
   btnMark.addEventListener('click', async () => {
@@ -125,14 +141,20 @@ export function initSetupScreen({ onStart, onGpsStatus }) {
   });
 
   el('btn-start').addEventListener('click', () => {
-    const session = {
+    const now = Date.now();
+    // Пересчитываем лимит на момент нажатия: «оплачено до» и P-skive считаются от «сейчас».
+    const chosen = readLimit(now);
+    if (chosen.type !== 'none' && chosen.until === null) return;
+    const session = createSession({
       point: markedPoint,
-      startTime: Date.now(),
-      durationMs: selectedMinutes * 60 * 1000,
+      limitType: chosen.type,
+      limitUntil: chosen.until,
       paceKmh: Number(el('pace-select').value),
       bufferMs: Number(el('buffer-select').value) * 60 * 1000,
-    };
+      now,
+    });
     saveSession(session);
+    rememberSession(session); // в истории видно и незавершённые парковки
     onStart(session);
   });
 }

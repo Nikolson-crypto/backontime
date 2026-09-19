@@ -161,8 +161,15 @@ html, body {
   box-shadow: 0 5px 14px rgba(61, 139, 255, 0.3);
 }
 
+/* Панель выбранного типа лимита: P-skive / оплачено до / без лимита */
+.limit-panel { margin-top: 12px; }
+.limit-panel .hint { text-align: left; margin-top: 8px; }
+#limit-error:empty { min-height: 0; }
+#limit-error { margin: 8px 0 0; }
+
 .custom-duration input,
 .point-details input[type="text"],
+.field input[type="time"],
 .field select {
   width: 100%;
   background: var(--surface-soft);
@@ -178,6 +185,7 @@ html, body {
 .point-details input::placeholder { color: var(--ink-soft); opacity: 0.75; }
 .custom-duration input:focus,
 .point-details input[type="text"]:focus,
+.field input[type="time"]:focus,
 .field select:focus {
   outline: none;
   border-color: var(--primary);
@@ -191,6 +199,25 @@ html, body {
 
 .point-details { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 .photo-preview { margin-top: 8px; max-width: 100%; max-height: 160px; border-radius: 12px; object-fit: cover; }
+
+/* Карточка «Последние парковки» */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+}
+.history-row:active { transform: translateY(1px); }
+.history-note { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+.history-meta { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
 
 .join-banner {
   background: var(--primary-tint);
@@ -428,8 +455,22 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-.row-buttons { display: flex; gap: 12px; }
-.row-buttons .key { flex: 1; }
+.row-buttons { display: flex; gap: 8px; }
+.row-buttons .key { flex: 1; padding: 14px 8px; font-size: 0.86rem; white-space: nowrap; }
+
+/* Меню продления лимита над кнопками */
+.extend-sheet {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 12px 4px;
+  box-shadow: var(--shadow);
+}
+.extend-sheet .presets { margin-bottom: 0; }
+.extend-paid { display: flex; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.extend-paid .field { flex: 1; margin-bottom: 0; }
+#extend-error { margin: 6px 0 0; }
+#extend-error:empty { min-height: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse, .dot, .leaflet-locate a.locating svg { animation: none !important; }

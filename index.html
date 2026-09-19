@@ -49,17 +49,37 @@
     </div>
 
     <div class="card">
-      <h2 data-i18n="setup.time.heading">02 · Сколько у вас времени</h2>
-      <div class="presets" id="duration-presets">
-        <button class="chip" data-min="30" data-i18n="setup.time.30">30 мин</button>
-        <button class="chip" data-min="60" data-i18n="setup.time.60">1 ч</button>
-        <button class="chip" data-min="90" data-i18n="setup.time.90">1.5 ч</button>
-        <button class="chip" data-min="120" data-i18n="setup.time.120">2 ч</button>
-        <button class="chip" data-min="180" data-i18n="setup.time.180">3 ч</button>
+      <h2 data-i18n="setup.limit.heading">02 · Какой лимит</h2>
+      <div class="presets" id="limit-type">
+        <button class="chip selected" data-type="pskive" data-i18n="setup.limit.pskive">P-skive</button>
+        <button class="chip" data-type="paid_until" data-i18n="setup.limit.paid">Оплачено до</button>
+        <button class="chip" data-type="none" data-i18n="setup.limit.none">Без лимита</button>
       </div>
-      <div class="custom-duration">
-        <input type="number" id="custom-minutes" min="1" max="720" data-i18n-placeholder="setup.time.customPlaceholder" placeholder="или своё, мин">
+
+      <div class="limit-panel" id="limit-panel-pskive">
+        <div class="presets" id="duration-presets">
+          <button class="chip" data-hours="1" data-i18n="setup.limit.h1">1 ч</button>
+          <button class="chip" data-hours="2" data-i18n="setup.limit.h2">2 ч</button>
+          <button class="chip" data-hours="3" data-i18n="setup.limit.h3">3 ч</button>
+        </div>
+        <div class="custom-duration">
+          <input type="number" id="custom-minutes" min="1" max="720" data-i18n-placeholder="setup.time.customPlaceholder" placeholder="или своё, мин">
+        </div>
       </div>
+
+      <div class="limit-panel hidden" id="limit-panel-paid">
+        <label class="field">
+          <span data-i18n="setup.limit.paidLabel">До какого времени оплачено</span>
+          <input type="time" id="paid-until">
+        </label>
+        <p class="hint" data-i18n="setup.limit.paidHint">Время из EasyPark / ParkOne / паркомата</p>
+      </div>
+
+      <div class="limit-panel hidden" id="limit-panel-none">
+        <p class="hint" data-i18n="setup.limit.noneHint">Напоминаний не будет, только дорога до машины</p>
+      </div>
+
+      <p id="limit-error" class="error"></p>
     </div>
 
     <div class="card">
@@ -84,7 +104,12 @@
       </label>
     </div>
 
-    <button id="btn-start" class="btn btn-primary btn-lg" data-i18n="setup.start" disabled>Начать отсчёт</button>
+    <div class="card hidden" id="history-card">
+      <h2 data-i18n="setup.history.heading">Последние парковки</h2>
+      <div id="history-list" class="history-list"></div>
+    </div>
+
+    <button id="btn-start" class="btn btn-primary btn-lg" data-i18n="setup.start" disabled>Я припарковался</button>
     <p id="setup-error" class="error"></p>
   </section>
 
@@ -148,9 +173,26 @@
       </div>
     </div>
 
+    <div id="extend-sheet" class="extend-sheet hidden">
+      <div class="presets" id="extend-presets">
+        <button class="chip" data-add="15" data-i18n="tracking.extend.15">+15 мин</button>
+        <button class="chip" data-add="30" data-i18n="tracking.extend.30">+30 мин</button>
+        <button class="chip" data-add="60" data-i18n="tracking.extend.60">+1 ч</button>
+      </div>
+      <div id="extend-paid" class="extend-paid hidden">
+        <label class="field">
+          <span data-i18n="tracking.extend.untilLabel">до</span>
+          <input type="time" id="extend-until">
+        </label>
+        <button id="btn-extend-apply" class="btn btn-sm" data-i18n="tracking.extend.apply">Применить</button>
+      </div>
+      <p id="extend-error" class="error"></p>
+    </div>
+
     <div class="row-buttons">
+      <button id="btn-extend" class="key" data-i18n="tracking.extend">＋ Продлить</button>
       <button id="btn-share" class="key" data-i18n="tracking.share">⤴ Поделиться</button>
-      <button id="btn-stop" class="key primary" data-i18n="tracking.stop">■ Завершить</button>
+      <button id="btn-stop" class="key primary" data-i18n="tracking.stop">■ Я у машины</button>
     </div>
     <p id="share-status" class="hint"></p>
   </section>

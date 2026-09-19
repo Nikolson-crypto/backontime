@@ -2,9 +2,10 @@
 import { t } from '../i18n/index.js';
 import { getCurrentPosition, watchPosition, geoErrorKey } from '../geo/position.js';
 import { fetchWalkingRoute, haversineMeters } from '../geo/route.js';
-import { computeStatus, deadlineOf, estimateWalkMs } from '../parking/limits.js';
-import { clearSession, buildShareUrl } from '../parking/session.js';
-import { fireAlarmOnce, silenceAlarm } from '../alerts/local.js';
+import { statusFor, deadlineOf, estimateWalkMs, extendSession, timestampForHHMM } from '../parking/limits.js';
+import { clearSession, saveSession, recordEnded, buildShareUrl } from '../parking/session.js';
+import { rememberSession } from '../parking/history.js';
+import { fireAlarmOnce, silenceAlarm, stopAlarm } from '../alerts/local.js';
 import { initMap, updateUserMarker, drawRoute, centerOn, setLocating } from '../map/map.js';
 import { initCompass, updateCompass } from './compass.js';
 import { fmtDuration, fmtClock, formatDistance } from './format.js';
@@ -76,7 +77,7 @@ function setStatus(level, title, detail) {
 function tick() {
   if (!session) return;
   const deadline = deadlineOf(session);
-  el('stat-deadline').textContent = fmtClock(deadline);
+  el('stat-deadline').textContent = deadline === null ? t('tracking.noLimit') : fmtClock(deadline);
 
   if (cachedWalkMs === null) {
     el('ring-distance').textContent = t('tracking.searching');
@@ -90,7 +91,14 @@ function tick() {
   el('stat-walk-time').textContent = fmtDuration(cachedWalkMs);
   updateCompass(currentPos, session.point);
 
-  const s = computeStatus({ now: Date.now(), deadline, walkMs: cachedWalkMs, bufferMs: session.bufferMs });
+  const s = statusFor(session, { now: Date.now(), walkMs: cachedWalkMs });
+  if (!s) {
+    // Лимита нет: показываем только дорогу до машины, без статусов и тревоги.
+    el('stat-leave-in').textContent = '—';
+    setStatus('ok', t('tracking.status.none.title'), t('tracking.status.none.detail', { time: fmtDuration(cachedWalkMs) }));
+    return;
+  }
+
   el('stat-leave-in').textContent = s.timeUntilLeave > 0 ? fmtDuration(s.timeUntilLeave) : t('tracking.leaveNow');
 
   if (s.late) {
@@ -123,11 +131,51 @@ async function share() {
   }
 }
 
+/** Продлить лимит: заплатили ещё или перевернули P-skive. */
+function applyExtend(patch) {
+  session = extendSession(session, patch);
+  saveSession(session);
+  stopAlarm(); // лимит сдвинулся — тревога может сработать заново
+  el('btn-silence').classList.add('hidden');
+  el('extend-sheet').classList.add('hidden');
+  el('extend-error').textContent = '';
+  tick();
+}
+
+/** Кнопка «Продлить» и её меню-лист. */
+function initExtend() {
+  const sheet = el('extend-sheet');
+  const paidRow = el('extend-paid');
+
+  el('btn-extend').addEventListener('click', () => {
+    sheet.classList.toggle('hidden');
+    paidRow.classList.toggle('hidden', session.limitType !== 'paid_until');
+  });
+
+  el('extend-presets').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (btn) applyExtend({ addMs: Number(btn.dataset.add) * 60 * 1000 });
+  });
+
+  el('btn-extend-apply').addEventListener('click', () => {
+    const now = Date.now();
+    const untilTs = timestampForHHMM(el('extend-until').value, now);
+    if (untilTs === null) return;
+    if (untilTs <= now) {
+      el('extend-error').textContent = t('tracking.extend.pastError');
+      return;
+    }
+    applyExtend({ untilTs });
+  });
+}
+
 function stop() {
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   if (tickInterval) clearInterval(tickInterval);
   silenceAlarm();
   if (wakeLock) wakeLock.release().catch(() => {});
+  session = recordEnded(session);
+  rememberSession(session); // обновляем запись истории по id: теперь с endedAt
   clearSession();
   window.location.reload();
 }
@@ -150,6 +198,10 @@ export function startTracking(s, { onGpsStatus }) {
     }
     el('point-note-card').classList.remove('hidden');
   }
+
+  // Без лимита продлевать нечего — прячем кнопку.
+  el('btn-extend').classList.toggle('hidden', session.limitType === 'none');
+  initExtend();
 
   el('btn-silence').addEventListener('click', () => { silenceAlarm(); el('btn-silence').classList.add('hidden'); });
   el('btn-share').addEventListener('click', share);
